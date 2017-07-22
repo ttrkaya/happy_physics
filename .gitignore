@@ -1,0 +1,6 @@
+HappyPhysics/.vs/
+HappyPhysics/Library/
+HappyPhysics/Temp/
+HappyPhysics/ProjectSettings/
+*.csproj
+*.sln
