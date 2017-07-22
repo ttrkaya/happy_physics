@@ -14,7 +14,7 @@ public class Main : MonoBehaviour {
             center = -1f,
             size = 0.2f,
             vel = 0.3f,
-            invMass = 1f,
+            invMass = 0.1f,
         },
         new Body {
             center = 1f,
@@ -69,12 +69,16 @@ public class Main : MonoBehaviour {
 
                         // eliminate overlapping (seperation)
                         float totOverlap = (totSize * 0.5f) - Mathf.Abs(dp);
-                        b.center += totOverlap * invMassRatioA * dp / Mathf.Abs(dp);
-                        a.center -= totOverlap * invMassRatioB * dp / Mathf.Abs(dp);
+                        b.center += totOverlap * invMassRatioB * dp / Mathf.Abs(dp);
+                        a.center -= totOverlap * invMassRatioA * dp / Mathf.Abs(dp);
 
                         // bounce
-                        a.vel *= -1f;
-                        b.vel *= -1f;
+                        float va = a.vel;
+                        float vb = b.vel;
+                        a.vel = -a.invMass * va + 2f * a.invMass * vb + b.invMass * va;
+                        a.vel /= totInvMass;
+                        b.vel = -b.invMass * vb + 2f * b.invMass * va + a.invMass * vb;
+                        b.vel /= totInvMass;
                     }
                 }
             }
