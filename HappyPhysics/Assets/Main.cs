@@ -60,10 +60,19 @@ public class Main : MonoBehaviour {
                 float dp = b.center - a.center;
                 bool collided = Mathf.Abs(dp) <= (totSize * 0.5f);
                 if(collided) {
-                    // bounce
                     float dv = b.vel - a.vel;
                     bool movingTowardsEachOther = dp * dv < 0;
                     if(movingTowardsEachOther) {
+                        float totInvMass = a.invMass + b.invMass;
+                        float invMassRatioA = a.invMass / totInvMass;
+                        float invMassRatioB = b.invMass / totInvMass;
+
+                        // eliminate overlapping (seperation)
+                        float totOverlap = (totSize * 0.5f) - Mathf.Abs(dp);
+                        b.center += totOverlap * invMassRatioA * dp / Mathf.Abs(dp);
+                        a.center -= totOverlap * invMassRatioB * dp / Mathf.Abs(dp);
+
+                        // bounce
                         a.vel *= -1f;
                         b.vel *= -1f;
                     }
