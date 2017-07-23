@@ -5,6 +5,10 @@ using UnityEngine;
 public class Body {
     public float center, size, vel;
     public float invMass; // = 1 / mass
+
+    public void ApplyImpulse(float amount) {
+        vel += amount * invMass;
+    }
 }
 
 public class Main : MonoBehaviour {
@@ -14,7 +18,7 @@ public class Main : MonoBehaviour {
             center = -1f,
             size = 0.2f,
             vel = 0.3f,
-            invMass = 0.1f,
+            invMass = 1f,
         },
         new Body {
             center = 1f,
@@ -67,18 +71,30 @@ public class Main : MonoBehaviour {
                         float invMassRatioA = a.invMass / totInvMass;
                         float invMassRatioB = b.invMass / totInvMass;
 
-                        // eliminate overlapping (seperation)
+                        // eliminate overlapping (separation)
                         float totOverlap = (totSize * 0.5f) - Mathf.Abs(dp);
                         b.center += totOverlap * invMassRatioB * dp / Mathf.Abs(dp);
                         a.center -= totOverlap * invMassRatioA * dp / Mathf.Abs(dp);
 
                         // bounce
-                        float va = a.vel;
-                        float vb = b.vel;
-                        a.vel = -a.invMass * va + 2f * a.invMass * vb + b.invMass * va;
-                        a.vel /= totInvMass;
-                        b.vel = -b.invMass * vb + 2f * b.invMass * va + a.invMass * vb;
-                        b.vel /= totInvMass;
+                        const float BOUNCINESS = 0.1f; // [0, 1]
+                        float desiredDv = -BOUNCINESS * dv;
+                        float desiredDvChange = desiredDv - dv;
+                        
+                        float dva = 1 * a.invMass;
+                        float dvb = -1 * b.invMass;
+                        float dvChange = dvb - dva;
+                        float imp = desiredDvChange / dvChange;
+                        a.ApplyImpulse(imp);
+                        b.ApplyImpulse(-imp);
+
+                        // algebraic method
+                        //float va = a.vel;
+                        //float vb = b.vel;
+                        //a.vel = -a.invMass * va + 2f * a.invMass * vb + b.invMass * va;
+                        //a.vel /= totInvMass;
+                        //b.vel = -b.invMass * vb + 2f * b.invMass * va + a.invMass * vb;
+                        //b.vel /= totInvMass;
                     }
                 }
             }
