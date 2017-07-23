@@ -15,16 +15,16 @@ public class Main : MonoBehaviour {
 
     List<Body> bodies = new List<Body> {
         new Body {
-            center = -1f,
-            size = 0.2f,
-            vel = 0.3f,
-            invMass = 1f,
+            center = -2.4f,
+            size = 2f,
+            vel = 0f,
+            invMass = 0f,
         },
         new Body {
-            center = 1f,
-            size = 0.2f,
-            vel = -0.3f,
-            invMass = 1f,
+            center = 2.4f,
+            size = 2f,
+            vel = -0f,
+            invMass = 0f,
         },
     };
 
@@ -41,7 +41,15 @@ public class Main : MonoBehaviour {
 
 
 	void Start () {
-		
+		for(int i = 0; i < 15; i++) {
+            var nb = new Body {
+                center = Random.Range(-1f, 1f),
+                size = Random.Range(0.02f, 0.2f),
+                vel = Random.Range(-0.3f, 0.3f),
+            };
+            nb.invMass = 1f / nb.size;
+            bodies.Add(nb);
+        }
 	}
     
 	void Update () {
@@ -77,7 +85,7 @@ public class Main : MonoBehaviour {
                         a.center -= totOverlap * invMassRatioA * dp / Mathf.Abs(dp);
 
                         // bounce
-                        const float BOUNCINESS = 0.1f; // [0, 1]
+                        const float BOUNCINESS = 0.99f; // [0, 1]
                         float desiredDv = -BOUNCINESS * dv;
                         float desiredDvChange = desiredDv - dv;
                         
