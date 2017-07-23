@@ -70,7 +70,8 @@ public class Main : MonoBehaviour {
 
                 float totSize = a.size + b.size;
                 float dp = b.center - a.center;
-                bool collided = Mathf.Abs(dp) <= (totSize * 0.5f);
+                float dpAbs = Mathf.Abs(dp);
+                bool collided = dpAbs <= (totSize * 0.5f);
                 if(collided) {
                     float dv = b.vel - a.vel;
                     bool movingTowardsEachOther = dp * dv < 0;
@@ -80,9 +81,10 @@ public class Main : MonoBehaviour {
                         float invMassRatioB = b.invMass / totInvMass;
 
                         // eliminate overlapping (separation)
-                        float totOverlap = (totSize * 0.5f) - Mathf.Abs(dp);
-                        b.center += totOverlap * invMassRatioB * dp / Mathf.Abs(dp);
-                        a.center -= totOverlap * invMassRatioA * dp / Mathf.Abs(dp);
+                        float totOverlap = (totSize * 0.5f) - dpAbs;
+                        float dpSign = dp / dpAbs;
+                        b.center += totOverlap * invMassRatioB * dpSign;
+                        a.center -= totOverlap * invMassRatioA * dpSign;
 
                         // bounce
                         const float BOUNCINESS = 0.99f; // [0, 1]
