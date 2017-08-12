@@ -2,12 +2,48 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public static class Math {
+    public static float Sqrt(float x) {
+        if(x < 0f) throw new System.Exception();
+        if(x == 0f) return 0f;
+
+        float res = x;
+        for(int i = 0; i < 100; i++) {
+            float otherSide = x / res;
+            res = (res + otherSide) * 0.5f;
+        }
+        return res;
+    }
+}
+
+public struct V2 {
+    public float x;
+    public float y;
+
+    public static V2 operator +(V2 a, V2 b) { return new V2 { x = a.x + b.x, y = a.y + a.y }; }
+    public static V2 operator -(V2 a, V2 b) { return new V2 { x = a.x - b.x, y = a.y - a.y }; }
+    public static V2 operator *(V2 v, float s) { return new V2 { x = v.x * s, y = v.y * s }; }
+    public static V2 operator *(float s, V2 v) { return v * s; }
+    public static V2 operator /(V2 v, float s) { return new V2 { x = v.x / s, y = v.y / s }; }
+    public static V2 operator /(float s, V2 v) { return v / s; }
+
+    public float len2() { return x * x + y * y; }
+    public float len() { return Math.Sqrt(len2()); }
+}
+
 public class Body {
     public float center, size, vel;
     public float invMass; // = 1 / mass
 
     public void ApplyImpulse(float amount) {
         vel += amount * invMass;
+
+        V2 a = new V2();
+        V2 b = new V2();
+        a += b;
+
+        a *= 2f;
+        b = 2f * a;
     }
 }
 
@@ -41,6 +77,10 @@ public class Main : MonoBehaviour {
 
 
 	void Start () {
+        for(float i = 0; i <= 100f; i++) {
+            print(i + ": " + Math.Sqrt(i));
+        }
+
 		for(int i = 0; i < 15; i++) {
             var nb = new Body {
                 center = Random.Range(-1f, 1f),
