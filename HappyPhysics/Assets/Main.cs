@@ -75,13 +75,13 @@ public class Main : MonoBehaviour {
         bodies.Add(new Body {
             center = new V2 { x = -1f, y = 0f },
             vel = new V2 { x = 1f, y = 0f },
-            r = 0.1f,
+            r = 0.3f,
             invMass = 1f,
         });
         bodies.Add(new Body {
             center = new V2 { x = 1f, y = 0f },
             vel = new V2 { x = -1f, y = 0f },
-            r = 0.1f,
+            r = 0.3f,
             invMass = 1f,
         });
 
@@ -96,6 +96,8 @@ public class Main : MonoBehaviour {
 
         float dt = Time.deltaTime;
 
+        dt *= 0.3f;
+
         foreach(var i in bodies) {
             i.center += i.vel * dt;
         }
@@ -108,34 +110,34 @@ public class Main : MonoBehaviour {
         
                 float tr = a.r + b.r;
                 V2 dp = b.center - a.center;
-                bool collided = dp.Len2() <= tr * tr;
+                float d2 = dp.Len2();
+                bool collided = d2 <= tr * tr;
                 if(collided) {
                     V2 dv = b.vel - a.vel;
                     bool movingTowardsEachOther = dp * dv < 0;
                     if(movingTowardsEachOther) {
-                        bodies.Clear();
-                        return;
-                        //float totInvMass = a.invMass + b.invMass;
-                        //float invMassRatioA = a.invMass / totInvMass;
-                        //float invMassRatioB = b.invMass / totInvMass;
-                        //
-                        //// eliminate overlapping (separation)
-                        //float totOverlap = (totSize * 0.5f) - dpAbs;
-                        //float dpSign = dp / dpAbs;
-                        //b.center += totOverlap * invMassRatioB * dpSign;
-                        //a.center -= totOverlap * invMassRatioA * dpSign;
-                        //
-                        //// bounce
-                        //const float BOUNCINESS = 0.99f; // [0, 1]
-                        //float desiredDv = -BOUNCINESS * dv;
-                        //float desiredDvChange = desiredDv - dv;
-                        //
-                        //float dva = 1 * a.invMass;
-                        //float dvb = -1 * b.invMass;
-                        //float dvChange = dvb - dva;
-                        //float imp = desiredDvChange / dvChange;
-                        //a.ApplyImpulse(imp);
-                        //b.ApplyImpulse(-imp);
+                        float totInvMass = a.invMass + b.invMass;
+                        float invMassRatioA = a.invMass / totInvMass;
+                        float invMassRatioB = b.invMass / totInvMass;
+
+                        // eliminate overlapping (separation)
+                        float dist = Math.Sqrt(d2);
+                        float totOverlap = tr - dist;
+                        V2 normal = dp / dist;
+                        b.center += normal * (totOverlap * invMassRatioB);
+                        a.center -= normal * (totOverlap * invMassRatioA);
+                        
+                        // bounce
+                        const float BOUNCINESS = 0.99f; // [0, 1]
+                        float desiredDv = -BOUNCINESS * (dv * normal);
+                        float desiredDvChange = desiredDv - (dv * normal);
+                        
+                        float dva = 1 * a.invMass;
+                        float dvb = -1 * b.invMass;
+                        float dvChange = dvb - dva;
+                        float imp = desiredDvChange / dvChange;
+                        a.ApplyImpulse(imp * normal);
+                        b.ApplyImpulse(-imp * normal);
                     }
                 }
             }
