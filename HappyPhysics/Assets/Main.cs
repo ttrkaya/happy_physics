@@ -171,14 +171,17 @@ public class Main : MonoBehaviour {
         const float outR = 0.5f;
         for(int i = n - 1; i >= 0; i--) {
             var o = bodies[i];
-            
-            float dist = o.center.Len() + o.r - outR;
-            if(dist > 0f) {
+
+            float distMax = outR - o.r;
+            float d2 = o.center.Len2();
+            if(d2 > distMax * distMax) {
                 V2 normal = o.center * -1;
                 normal /= normal.Len();
 
                 // eliminate overlapping (separation)
-                o.center += normal * dist;
+                float dist = Math.Sqrt(d2);
+                float move = dist - distMax;
+                o.center += normal * move;
 
                 bool movingTowardsEachOther = normal * o.vel < 0;
                 if(movingTowardsEachOther) { // bounce
