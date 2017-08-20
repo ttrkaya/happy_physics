@@ -102,15 +102,15 @@ public class Main : MonoBehaviour {
     };
     
     void Start () {
-        const int N = 10;
+        const int N = 20;
         for(int i = 0; i < N; i++) {
             float angle = 2f * Math.PI * i / N;
-            float r = Random.Range(0.7f, 0.9f);
+            float r = Random.Range(0.2f, 0.4f);
             bodies.Add(new Body {
                 center = new V2 { x = Math.Cos(angle), y = Math.Sin(angle) } * r,
                 vel = new V2 { x = -Math.Cos(angle), y = -Math.Sin(angle) },
-                r = 0.1f,
-                invMass = 1f,
+                r = r * 0.1f,
+                invMass = 1f / (r * r),
             });
         }
 	}
@@ -164,6 +164,31 @@ public class Main : MonoBehaviour {
                         a.ApplyImpulse(imp * normal);
                         b.ApplyImpulse(-imp * normal);
                     }
+                }
+            }
+        }
+        
+        const float outR = 0.5f;
+        for(int i = n - 1; i >= 0; i--) {
+            var o = bodies[i];
+            
+            float dist = o.center.Len() + o.r - outR;
+            if(dist > 0f) {
+                V2 normal = o.center * -1;
+                normal /= normal.Len();
+
+                // eliminate overlapping (separation)
+                o.center += normal * dist;
+
+                bool movingTowardsEachOther = normal * o.vel < 0;
+                if(movingTowardsEachOther) { // bounce
+                    const float BOUNCINESS = 0.99f; // [0, 1]
+                    float desiredDv = -BOUNCINESS * (o.vel * normal);
+                    float desiredDvChange = desiredDv - (o.vel * normal);
+
+                    float dv = 1 * o.invMass;
+                    float imp = desiredDvChange / dv;
+                    o.ApplyImpulse(imp * normal);
                 }
             }
         }
