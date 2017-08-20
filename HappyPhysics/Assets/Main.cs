@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public static class Math {
+    public const float PI = 3.14159265359f;
+
     public static float Sqrt(float x) {
         if(x < 0f) throw new System.Exception();
         if(x == 0f) return 0f;
@@ -13,6 +15,49 @@ public static class Math {
             res = (res + otherSide) * 0.5f;
         }
         return res;
+    }
+
+    public static float Sin(float x) {
+        x %= 2f * PI;
+
+        float cur = x;
+        float x2 = x * x;
+
+        float res = cur;
+
+        cur *= x2;
+        cur /= -3f * 2f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -5f * 4f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -7f * 6f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -9f * 8f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -11f * 10f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -13f * 12f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -15f * 14f;
+        res += cur;
+
+        cur *= x2;
+        cur /= -17f * 16f;
+        res += cur;
+
+        return res; 
     }
 }
 
@@ -72,18 +117,20 @@ public class Main : MonoBehaviour {
     };
 
     void Start () {
-        bodies.Add(new Body {
-            center = new V2 { x = -1f, y = 0f },
-            vel = new V2 { x = 1f, y = 0f },
-            r = 0.3f,
-            invMass = 1f,
-        });
-        bodies.Add(new Body {
-            center = new V2 { x = 1f, y = 0f },
-            vel = new V2 { x = -1f, y = 0f },
-            r = 0.3f,
-            invMass = 1f,
-        });
+        print("0: " + Math.Sin(0));
+        print("Mathf.PI * 0.25f: " + Math.Sin(Math.PI * 0.25f));
+        print("Mathf.PI * 0.5f: " + Math.Sin(Math.PI * 1.5f - 100 * Math.PI));
+        print("Mathf.PI: " + Math.Sin(Math.PI));
+
+        const int N = 10;
+        for(int i = 0; i < N; i++) {
+            bodies.Add(new Body {
+                center = new V2 { x = 1f, y = 0f },
+                vel = new V2 { x = -1f, y = 0f },
+                r = 0.3f,
+                invMass = 1f,
+            });
+        }
 
         foreach(var i in bodies) {
             i.vel.y = Random.Range(-0.1f, 0.1f);
