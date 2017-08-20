@@ -19,45 +19,30 @@ public static class Math {
 
     public static float Sin(float x) {
         x %= 2f * PI;
-
         float cur = x;
         float x2 = x * x;
-
         float res = cur;
+        for(float i = 3f; i < 100f; i += 2f) {
+            cur *= x2;
+            cur /= i * (i - 1f);
+            cur *= -1f;
+            res += cur;
+        }
+        return res;
+    }
 
-        cur *= x2;
-        cur /= -3f * 2f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -5f * 4f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -7f * 6f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -9f * 8f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -11f * 10f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -13f * 12f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -15f * 14f;
-        res += cur;
-
-        cur *= x2;
-        cur /= -17f * 16f;
-        res += cur;
-
-        return res; 
+    public static float Cos(float x) {
+        x %= 2f * PI;
+        float cur = 1;
+        float x2 = x * x;
+        float res = cur;
+        for(float i = 2f; i < 99f; i += 2f) {
+            cur *= x2;
+            cur /= i * (i - 1f);
+            cur *= -1f;
+            res += cur;
+        }
+        return res;
     }
 }
 
@@ -115,25 +100,18 @@ public class Main : MonoBehaviour {
     List<Body> bodies = new List<Body> {
         
     };
-
+    
     void Start () {
-        print("0: " + Math.Sin(0));
-        print("Mathf.PI * 0.25f: " + Math.Sin(Math.PI * 0.25f));
-        print("Mathf.PI * 0.5f: " + Math.Sin(Math.PI * 1.5f - 100 * Math.PI));
-        print("Mathf.PI: " + Math.Sin(Math.PI));
-
         const int N = 10;
         for(int i = 0; i < N; i++) {
+            float angle = 2f * Math.PI * i / N;
+            float r = Random.Range(0.7f, 0.9f);
             bodies.Add(new Body {
-                center = new V2 { x = 1f, y = 0f },
-                vel = new V2 { x = -1f, y = 0f },
-                r = 0.3f,
+                center = new V2 { x = Math.Cos(angle), y = Math.Sin(angle) } * r,
+                vel = new V2 { x = -Math.Cos(angle), y = -Math.Sin(angle) },
+                r = 0.1f,
                 invMass = 1f,
             });
-        }
-
-        foreach(var i in bodies) {
-            i.vel.y = Random.Range(-0.1f, 0.1f);
         }
 	}
     
@@ -161,20 +139,20 @@ public class Main : MonoBehaviour {
                 bool collided = d2 <= tr * tr;
                 if(collided) {
                     V2 dv = b.vel - a.vel;
-                    bool movingTowardsEachOther = dp * dv < 0;
-                    if(movingTowardsEachOther) {
-                        float totInvMass = a.invMass + b.invMass;
-                        float invMassRatioA = a.invMass / totInvMass;
-                        float invMassRatioB = b.invMass / totInvMass;
 
-                        // eliminate overlapping (separation)
-                        float dist = Math.Sqrt(d2);
-                        float totOverlap = tr - dist;
-                        V2 normal = dp / dist;
-                        b.center += normal * (totOverlap * invMassRatioB);
-                        a.center -= normal * (totOverlap * invMassRatioA);
-                        
-                        // bounce
+                    float totInvMass = a.invMass + b.invMass;
+                    float invMassRatioA = a.invMass / totInvMass;
+                    float invMassRatioB = b.invMass / totInvMass;
+
+                    // eliminate overlapping (separation)
+                    float dist = Math.Sqrt(d2);
+                    float totOverlap = tr - dist;
+                    V2 normal = dp / dist;
+                    b.center += normal * (totOverlap * invMassRatioB);
+                    a.center -= normal * (totOverlap * invMassRatioA);
+
+                    bool movingTowardsEachOther = dp * dv < 0;
+                    if(movingTowardsEachOther) { // bounce
                         const float BOUNCINESS = 0.99f; // [0, 1]
                         float desiredDv = -BOUNCINESS * (dv * normal);
                         float desiredDvChange = desiredDv - (dv * normal);
