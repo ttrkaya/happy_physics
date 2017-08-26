@@ -77,29 +77,13 @@ public class Body {
 public class Main : MonoBehaviour {
 
     // Render
+    // thx to Omer Faruk Sayilir
+    Mesh mesh;
+    Material material;
 
-    public GameObject prefabRect;
-    List<GameObject> rects = new List<GameObject>();
-    int rectsAt;
-    GameObject GetPooledRect() {
-        if(rectsAt == rects.Count) {
-            GameObject newRect = Instantiate(prefabRect);
-            rects.Add(newRect);
-        }
-        return rects[rectsAt++];
-    }
-    public GameObject prefabCircle;
-    List<GameObject> circles = new List<GameObject>();
-    int circleAt;
-    GameObject GetPooledCircle() {
-        if(circleAt == circles.Count) {
-            GameObject newCircle = Instantiate(prefabCircle);
-            circles.Add(newCircle);
-        }
-        return circles[circleAt++];
-    }
-
-    public Transform renderOuterCircle;
+    List<Vector3> verts = new List<Vector3>();
+    List<int> tris = new List<int>();
+    List<Color> colors = new List<Color>();
 
     // Physics
 
@@ -115,6 +99,12 @@ public class Main : MonoBehaviour {
     };
 
     void Start () {
+        mesh = new Mesh { name = "MyMesh" };
+        mesh.MarkDynamic();
+
+        Shader shader = Shader.Find("Sprites/Default");
+        material = new Material(shader);
+
         const int N = 20;
         for(int i = 0; i < N; i++) {
             float angle = 2f * Math.PI * i / N;
@@ -158,28 +148,20 @@ public class Main : MonoBehaviour {
 
         // ------ Rendering ----------
 
-        renderOuterCircle.transform.position = new Vector3 {
-            x = outerCircle.center.x,
-            y = outerCircle.center.y,
-            z = 1f,
-        };
+        RenderPre();
 
-        rectsAt = 0;
-        circleAt = 0;
+        DrawConvexPolygon(new List<Vector2> {
+            new Vector2(1, 1),
+            new Vector2(1, 2),
+            new Vector2(3, 3),
+            new Vector2(2, 1),
+        }, 0f, Color.red);
 
+        DrawCircle(outerCircle.center.x, outerCircle.center.y, 1f, outerCircle.r, Color.blue);
         foreach(var i in bodies) {
-            DrawCircle(i.center, i.r);
+            DrawCircle(i.center.x, i.center.y, 0f, i.r, Color.green);
         }
-        
-        // destroy unused
-        while(rects.Count > rectsAt) {
-            Destroy(rects[rects.Count - 1]);
-            rects.RemoveAt(rects.Count - 1);
-        }
-        while(circles.Count > circleAt) {
-            Destroy(circles[circles.Count - 1]);
-            circles.RemoveAt(circles.Count - 1);
-        }
+        RenderPost();
     }
 
     private static void HandlePairInside(Body inner, Body outer) {
@@ -252,16 +234,61 @@ public class Main : MonoBehaviour {
         }
     }
 
-    void DrawRect(float centerX, float centerY, float widht, float height) {
-        var rect = GetPooledRect();
-        rect.transform.position = new Vector3(centerX, centerY);
-        rect.transform.localScale = new Vector3(widht, height, 1f);
+    // Render
+
+    public void RenderPre() {
+        verts.Clear();
+        tris.Clear();
+        colors.Clear();
     }
 
-    void DrawCircle(V2 center, float radius) {
-        var circle = GetPooledCircle();
-        circle.transform.position = new Vector3(center.x, center.y, 0f);
-        float scale = radius * 2f;
-        circle.transform.localScale = new Vector3(scale, scale, 0f);
+    public void RenderPost() {
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetColors(colors);
+
+        Graphics.DrawMesh(mesh, Matrix4x4.identity, material, 0);
+    }
+
+    public void DrawCircle(float x, float y, float z, float r, Color color, int n = 100) {
+        for(int i = 0; i < n; i++) {
+            float angle = Mathf.PI * 2f * ((float)i / (float)n);
+            float px = x + Mathf.Cos(angle) * r;
+            float py = y + Mathf.Sin(angle) * r;
+            verts.Add(new Vector3 {
+                x = px,
+                y = py,
+                z = z,
+            });
+
+            colors.Add(color);
+        }
+
+        int lastVert = verts.Count - 1;
+        for(int i = 2; i < n; i++) {
+            tris.Add(lastVert);
+            tris.Add(lastVert - n + i);
+            tris.Add(lastVert - n + i - 1);
+        }
+    }
+
+    public void DrawConvexPolygon(List<Vector2> ps, float z, Color color) {
+        int n = ps.Count;
+        for(int i = 0; i < n; i++) {
+            var p = ps[i];
+            verts.Add(new Vector3 {
+                x = p.x,
+                y = p.y,
+                z = z,
+            });
+            colors.Add(color);
+        }
+
+        int lastVert = verts.Count - 1;
+        for(int i = 2; i < n; i++) {
+            tris.Add(lastVert);
+            tris.Add(lastVert - n + i);
+            tris.Add(lastVert - n + i - 1);
+        }
     }
 }
