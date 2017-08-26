@@ -76,6 +76,8 @@ public class Body {
 
 public class Main : MonoBehaviour {
 
+    // Render
+
     public GameObject prefabRect;
     List<GameObject> rects = new List<GameObject>();
     int rectsAt;
@@ -97,10 +99,19 @@ public class Main : MonoBehaviour {
         return circles[circleAt++];
     }
 
+    public Transform renderOuterCircle;
+
+    // Physics
+
     List<Body> bodies = new List<Body> {
         
     };
-    
+
+    float outerCircleR = 0.5f;
+    V2 outerCirclePos = new V2();
+    V2 outerCircleVel = new V2 { x = 1f, y = -0.5f };
+    float outerCircleInvMass = 5f;
+
     void Start () {
         const int N = 20;
         for(int i = 0; i < N; i++) {
@@ -126,6 +137,7 @@ public class Main : MonoBehaviour {
         foreach(var i in bodies) {
             i.center += i.vel * dt;
         }
+        outerCirclePos += outerCircleVel * dt;
         
         int n = bodies.Count;
         for(int i = n - 1; i >= 0; i--) {
@@ -168,35 +180,51 @@ public class Main : MonoBehaviour {
             }
         }
         
-        const float outR = 0.5f;
         for(int i = n - 1; i >= 0; i--) {
             var o = bodies[i];
 
-            float distMax = outR - o.r;
-            float d2 = o.center.Len2();
-            if(d2 > distMax * distMax) {
-                V2 normal = o.center * -1;
-                normal /= normal.Len();
+            float dr = outerCircleR - o.r;
+            V2 dp = o.center - outerCirclePos;
+            float d2 = dp.Len2();
+            bool areOverlapping = d2 >= dr * dr;
+            if(areOverlapping) {
+                float totInvMass = outerCircleInvMass + o.invMass;
+                float invMassRatioA = outerCircleInvMass / totInvMass;
+                float invMassRatioB = o.invMass / totInvMass;
 
                 // eliminate overlapping (separation)
                 float dist = Math.Sqrt(d2);
-                float move = dist - distMax;
-                o.center += normal * move;
+                float totOverlap = dist - dr;
+                V2 normal = dp / -dist;
+                o.center += normal * (totOverlap * invMassRatioB);
+                outerCirclePos -= normal * (totOverlap * invMassRatioA);
 
-                bool movingTowardsEachOther = normal * o.vel < 0;
+                V2 dv = o.vel - outerCircleVel;
+                bool movingTowardsEachOther = dp * dv > 0;
                 if(movingTowardsEachOther) { // bounce
                     const float BOUNCINESS = 0.99f; // [0, 1]
-                    float desiredDv = -BOUNCINESS * (o.vel * normal);
-                    float desiredDvChange = desiredDv - (o.vel * normal);
+                    float desiredDv = -BOUNCINESS * (dv * normal);
+                    float desiredDvChange = desiredDv - (dv * normal);
 
-                    float dv = 1 * o.invMass;
-                    float imp = desiredDvChange / dv;
-                    o.ApplyImpulse(imp * normal);
+                    float dva = 1 * outerCircleInvMass;
+                    float dvb = -1 * o.invMass;
+                    float dvChange = dvb - dva;
+                    float imp = desiredDvChange / dvChange;
+                    //a.ApplyImpulse(imp * normal);
+                    outerCircleVel += outerCircleInvMass * (imp * normal);
+                    o.ApplyImpulse(-imp * normal);
                 }
             }
         }
 
         // ------ Rendering ----------
+
+        renderOuterCircle.transform.position = new Vector3 {
+            x = outerCirclePos.x,
+            y = outerCirclePos.y,
+            z = 1f,
+        };
+
         rectsAt = 0;
         circleAt = 0;
 
