@@ -106,11 +106,13 @@ public class Main : MonoBehaviour {
     List<Body> bodies = new List<Body> {
         
     };
-
-    float outerCircleR = 0.5f;
-    V2 outerCirclePos = new V2();
-    V2 outerCircleVel = new V2 { x = 1f, y = -0.5f };
-    float outerCircleInvMass = 5f;
+    
+    Body outerCircle = new Body {
+        r = 0.5f,
+        center = new V2(),
+        vel = new V2 { x = 1f, y = 1f },
+        invMass = 5f,
+    };
 
     void Start () {
         const int N = 20;
@@ -137,91 +139,28 @@ public class Main : MonoBehaviour {
         foreach(var i in bodies) {
             i.center += i.vel * dt;
         }
-        outerCirclePos += outerCircleVel * dt;
+        outerCircle.center += outerCircle.vel * dt;
         
         int n = bodies.Count;
         for(int i = n - 1; i >= 0; i--) {
             var a = bodies[i];
             for(int j = i - 1; j >= 0; j--) {
                 var b = bodies[j];
-        
-                float tr = a.r + b.r;
-                V2 dp = b.center - a.center;
-                float d2 = dp.Len2();
-                bool collided = d2 <= tr * tr;
-                if(collided) {
-                    V2 dv = b.vel - a.vel;
-
-                    float totInvMass = a.invMass + b.invMass;
-                    float invMassRatioA = a.invMass / totInvMass;
-                    float invMassRatioB = b.invMass / totInvMass;
-
-                    // eliminate overlapping (separation)
-                    float dist = Math.Sqrt(d2);
-                    float totOverlap = tr - dist;
-                    V2 normal = dp / dist;
-                    b.center += normal * (totOverlap * invMassRatioB);
-                    a.center -= normal * (totOverlap * invMassRatioA);
-
-                    bool movingTowardsEachOther = dp * dv < 0;
-                    if(movingTowardsEachOther) { // bounce
-                        const float BOUNCINESS = 0.99f; // [0, 1]
-                        float desiredDv = -BOUNCINESS * (dv * normal);
-                        float desiredDvChange = desiredDv - (dv * normal);
-                        
-                        float dva = 1 * a.invMass;
-                        float dvb = -1 * b.invMass;
-                        float dvChange = dvb - dva;
-                        float imp = desiredDvChange / dvChange;
-                        a.ApplyImpulse(imp * normal);
-                        b.ApplyImpulse(-imp * normal);
-                    }
-                }
+                HandlePairOutside(a, b);
             }
         }
         
         for(int i = n - 1; i >= 0; i--) {
             var o = bodies[i];
-
-            float dr = outerCircleR - o.r;
-            V2 dp = o.center - outerCirclePos;
-            float d2 = dp.Len2();
-            bool areOverlapping = d2 >= dr * dr;
-            if(areOverlapping) {
-                float totInvMass = outerCircleInvMass + o.invMass;
-                float invMassRatioA = outerCircleInvMass / totInvMass;
-                float invMassRatioB = o.invMass / totInvMass;
-
-                // eliminate overlapping (separation)
-                float dist = Math.Sqrt(d2);
-                float totOverlap = dist - dr;
-                V2 normal = dp / -dist;
-                o.center += normal * (totOverlap * invMassRatioB);
-                outerCirclePos -= normal * (totOverlap * invMassRatioA);
-
-                V2 dv = o.vel - outerCircleVel;
-                bool movingTowardsEachOther = dp * dv > 0;
-                if(movingTowardsEachOther) { // bounce
-                    const float BOUNCINESS = 0.99f; // [0, 1]
-                    float desiredDv = -BOUNCINESS * (dv * normal);
-                    float desiredDvChange = desiredDv - (dv * normal);
-
-                    float dva = 1 * outerCircleInvMass;
-                    float dvb = -1 * o.invMass;
-                    float dvChange = dvb - dva;
-                    float imp = desiredDvChange / dvChange;
-                    //a.ApplyImpulse(imp * normal);
-                    outerCircleVel += outerCircleInvMass * (imp * normal);
-                    o.ApplyImpulse(-imp * normal);
-                }
-            }
+            var outer = outerCircle;
+            HandlePairInside(o, outer);
         }
 
         // ------ Rendering ----------
 
         renderOuterCircle.transform.position = new Vector3 {
-            x = outerCirclePos.x,
-            y = outerCirclePos.y,
+            x = outerCircle.center.x,
+            y = outerCircle.center.y,
             z = 1f,
         };
 
@@ -240,6 +179,76 @@ public class Main : MonoBehaviour {
         while(circles.Count > circleAt) {
             Destroy(circles[circles.Count - 1]);
             circles.RemoveAt(circles.Count - 1);
+        }
+    }
+
+    private static void HandlePairInside(Body inner, Body outer) {
+        float dr = outer.r - inner.r;
+        V2 dp = inner.center - outer.center;
+        float d2 = dp.Len2();
+        bool areOverlapping = d2 >= dr * dr;
+        if(areOverlapping) {
+            float totInvMass = outer.invMass + inner.invMass;
+            float invMassRatioA = outer.invMass / totInvMass;
+            float invMassRatioB = inner.invMass / totInvMass;
+
+            // eliminate overlapping (separation)
+            float dist = Math.Sqrt(d2);
+            float totOverlap = dist - dr;
+            V2 normal = dp / -dist;
+            inner.center += normal * (totOverlap * invMassRatioB);
+            outer.center -= normal * (totOverlap * invMassRatioA);
+
+            V2 dv = inner.vel - outer.vel;
+            bool movingTowardsEachOther = dp * dv > 0;
+            if(movingTowardsEachOther) { // bounce
+                const float BOUNCINESS = 0.99f; // [0, 1]
+                float desiredDv = -BOUNCINESS * (dv * normal);
+                float desiredDvChange = desiredDv - (dv * normal);
+
+                float dva = 1 * outer.invMass;
+                float dvb = -1 * inner.invMass;
+                float dvChange = dvb - dva;
+                float imp = desiredDvChange / dvChange;
+                //a.ApplyImpulse(imp * normal);
+                outer.vel += outer.invMass * (imp * normal);
+                inner.ApplyImpulse(-imp * normal);
+            }
+        }
+    }
+
+    private static void HandlePairOutside(Body a, Body b) {
+        float tr = a.r + b.r;
+        V2 dp = b.center - a.center;
+        float d2 = dp.Len2();
+        bool collided = d2 <= tr * tr;
+        if(collided) {
+            V2 dv = b.vel - a.vel;
+
+            float totInvMass = a.invMass + b.invMass;
+            float invMassRatioA = a.invMass / totInvMass;
+            float invMassRatioB = b.invMass / totInvMass;
+
+            // eliminate overlapping (separation)
+            float dist = Math.Sqrt(d2);
+            float totOverlap = tr - dist;
+            V2 normal = dp / dist;
+            b.center += normal * (totOverlap * invMassRatioB);
+            a.center -= normal * (totOverlap * invMassRatioA);
+
+            bool movingTowardsEachOther = dp * dv < 0;
+            if(movingTowardsEachOther) { // bounce
+                const float BOUNCINESS = 0.99f; // [0, 1]
+                float desiredDv = -BOUNCINESS * (dv * normal);
+                float desiredDvChange = desiredDv - (dv * normal);
+
+                float dva = 1 * a.invMass;
+                float dvb = -1 * b.invMass;
+                float dvChange = dvb - dva;
+                float imp = desiredDvChange / dvChange;
+                a.ApplyImpulse(imp * normal);
+                b.ApplyImpulse(-imp * normal);
+            }
         }
     }
 
