@@ -75,16 +75,6 @@ public class Body {
 
 public class Main : MonoBehaviour {
 
-    // Render
-    // thx to Omer Faruk Sayilir
-    Mesh renderMesh;
-    Material renderMaterial;
-    List<Vector3> renderVerts = new List<Vector3>();
-    List<int> renderTris = new List<int>();
-    List<Color> renderColors = new List<Color>();
-
-    // Physics
-
     List<Body> bodies = new List<Body> {
         
     };
@@ -96,85 +86,9 @@ public class Main : MonoBehaviour {
         invMass = 5f,
     };
 
-    static void HandlePairInside(Body inner, Body outer) {
-        float dr = outer.r - inner.r;
-        V2 dp = inner.center - outer.center;
-        float d2 = dp.Len2();
-        bool areOverlapping = d2 >= dr * dr;
-        if(areOverlapping) {
-            float totInvMass = outer.invMass + inner.invMass;
-            float invMassRatioA = outer.invMass / totInvMass;
-            float invMassRatioB = inner.invMass / totInvMass;
-
-            // eliminate overlapping (separation)
-            float dist = Math.Sqrt(d2);
-            float totOverlap = dist - dr;
-            V2 normal = dp / -dist;
-            inner.center += normal * (totOverlap * invMassRatioB);
-            outer.center -= normal * (totOverlap * invMassRatioA);
-
-            V2 dv = inner.vel - outer.vel;
-            bool movingTowardsEachOther = dp * dv > 0;
-            if(movingTowardsEachOther) { // bounce
-                const float BOUNCINESS = 0.99f; // [0, 1]
-                float desiredDv = -BOUNCINESS * (dv * normal);
-                float desiredDvChange = desiredDv - (dv * normal);
-
-                float dva = 1 * outer.invMass;
-                float dvb = -1 * inner.invMass;
-                float dvChange = dvb - dva;
-                float imp = desiredDvChange / dvChange;
-                //a.ApplyImpulse(imp * normal);
-                outer.vel += outer.invMass * (imp * normal);
-                inner.ApplyImpulse(-imp * normal);
-            }
-        }
-    }
-
-    static void HandlePairOutside(Body a, Body b) {
-        float tr = a.r + b.r;
-        V2 dp = b.center - a.center;
-        float d2 = dp.Len2();
-        bool collided = d2 <= tr * tr;
-        if(collided) {
-            V2 dv = b.vel - a.vel;
-
-            float totInvMass = a.invMass + b.invMass;
-            float invMassRatioA = a.invMass / totInvMass;
-            float invMassRatioB = b.invMass / totInvMass;
-
-            // eliminate overlapping (separation)
-            float dist = Math.Sqrt(d2);
-            float totOverlap = tr - dist;
-            V2 normal = dp / dist;
-            b.center += normal * (totOverlap * invMassRatioB);
-            a.center -= normal * (totOverlap * invMassRatioA);
-
-            bool movingTowardsEachOther = dp * dv < 0;
-            if(movingTowardsEachOther) { // bounce
-                const float BOUNCINESS = 0.99f; // [0, 1]
-                float desiredDv = -BOUNCINESS * (dv * normal);
-                float desiredDvChange = desiredDv - (dv * normal);
-
-                float dva = 1 * a.invMass;
-                float dvb = -1 * b.invMass;
-                float dvChange = dvb - dva;
-                float imp = desiredDvChange / dvChange;
-                a.ApplyImpulse(imp * normal);
-                b.ApplyImpulse(-imp * normal);
-            }
-        }
-    }
-
     void Start () {
 
-        // Render
-
-        renderMesh = new Mesh { name = "MyMesh" };
-        renderMesh.MarkDynamic();
-        renderMaterial = new Material(Shader.Find("Sprites/Default"));
-
-        // Physics
+        RenderInit();
 
         const int N = 20;
         for(int i = 0; i < N; i++) {
@@ -217,32 +131,122 @@ public class Main : MonoBehaviour {
             HandlePairInside(o, outer);
         }
 
-        // ------ Rendering ----------
+        // ------ Render ----------
 
         RenderPre();
 
-        DrawConvexPolygon(new List<V2> {
-            new V2 { x = -0.9f, y = 0.1f },
-            new V2 { x = -0.9f, y = -0.1f },
-            new V2 { x = 0.9f, y = 0f },
-        }, Color.red);
+        DrawConvexPolygon(
+            new List<V2> {
+                new V2 { x = -0.9f, y = 0.1f },
+                new V2 { x = -0.9f, y = -0.1f },
+                new V2 { x = 0.9f, y = 0f },
+            }, Color.red);
 
         DrawCircle(outerCircle.center.x, outerCircle.center.y, outerCircle.r, new Color(0, 0, 1, 0.5f));
         foreach(var i in bodies) {
             DrawCircle(i.center.x, i.center.y, i.r, Color.green);
         }
+
+        DrawArrow(
+            new V2 { x = -0.3f, y = -0.9f },
+            new V2 { x = -0.7f, y = 0.3f },
+            0.1f,
+            Color.white );
+
         RenderPost();
     }
 
-    // Render
+    static void HandlePairInside(Body inner, Body outer) {
+        float dr = outer.r - inner.r;
+        V2 dp = inner.center - outer.center;
+        float d2 = dp.Len2();
+        bool areOverlapping = d2 >= dr * dr;
+        if(areOverlapping) {
+            float totInvMass = outer.invMass + inner.invMass;
+            float invMassRatioA = outer.invMass / totInvMass;
+            float invMassRatioB = inner.invMass / totInvMass;
 
-    public void RenderPre() {
+            // eliminate overlapping (separation)
+            float dist = Math.Sqrt(d2);
+            float totOverlap = dist - dr;
+            V2 normal = dp / -dist;
+            inner.center += normal * (totOverlap * invMassRatioB);
+            outer.center -= normal * (totOverlap * invMassRatioA);
+
+            V2 dv = inner.vel - outer.vel;
+            bool movingTowardsEachOther = dp * dv > 0;
+            if(movingTowardsEachOther) { // bounce
+                const float BOUNCINESS = 0.99f; // [0, 1]
+                float desiredDv = -BOUNCINESS * (dv * normal);
+                float desiredDvChange = desiredDv - (dv * normal);
+
+                float dva = 1 * outer.invMass;
+                float dvb = -1 * inner.invMass;
+                float dvChange = dvb - dva;
+                float impLen = desiredDvChange / dvChange;
+                outer.ApplyImpulse(impLen * normal);
+                inner.ApplyImpulse(-impLen * normal);
+            }
+        }
+    }
+
+    static void HandlePairOutside(Body a, Body b) {
+        float tr = a.r + b.r;
+        V2 dp = b.center - a.center;
+        float d2 = dp.Len2();
+        bool collided = d2 <= tr * tr;
+        if(collided) {
+            V2 dv = b.vel - a.vel;
+
+            float totInvMass = a.invMass + b.invMass;
+            float invMassRatioA = a.invMass / totInvMass;
+            float invMassRatioB = b.invMass / totInvMass;
+
+            // eliminate overlapping (separation)
+            float dist = Math.Sqrt(d2);
+            float totOverlap = tr - dist;
+            V2 normal = dp / dist;
+            b.center += normal * (totOverlap * invMassRatioB);
+            a.center -= normal * (totOverlap * invMassRatioA);
+
+            bool movingTowardsEachOther = dp * dv < 0;
+            if(movingTowardsEachOther) { // bounce
+                const float BOUNCINESS = 0.99f; // [0, 1]
+                float desiredDv = -BOUNCINESS * (dv * normal);
+                float desiredDvChange = desiredDv - (dv * normal);
+
+                float dva = 1 * a.invMass;
+                float dvb = -1 * b.invMass;
+                float dvChange = dvb - dva;
+                float impLen = desiredDvChange / dvChange;
+                a.ApplyImpulse(impLen * normal);
+                b.ApplyImpulse(-impLen * normal);
+            }
+        }
+    }
+
+    // -------------- Render --------------------
+    // thx to Omer Faruk Sayilir
+
+    Mesh renderMesh;
+    Material renderMaterial;
+    List<Vector3> renderVerts = new List<Vector3>();
+    List<int> renderTris = new List<int>();
+    List<Color> renderColors = new List<Color>();
+
+    void RenderInit() {
+        renderMesh = new Mesh { name = "MyMesh" };
+        renderMesh.MarkDynamic();
+        renderMaterial = new Material(Shader.Find("Sprites/Default"));
+    }
+
+    void RenderPre() {
         renderVerts.Clear();
         renderTris.Clear();
         renderColors.Clear();
     }
 
-    public void RenderPost() {
+    void RenderPost() {
         renderMesh.SetVertices(renderVerts);
         renderMesh.SetTriangles(renderTris, 0);
         renderMesh.SetColors(renderColors);
@@ -250,7 +254,7 @@ public class Main : MonoBehaviour {
         Graphics.DrawMesh(renderMesh, Matrix4x4.identity, renderMaterial, 0);
     }
 
-    public void DrawCircle(float x, float y, float r, Color color, int n = 100) {
+    void DrawCircle(float x, float y, float r, Color color, int n = 100) {
         for(int i = 0; i < n; i++) {
             float angle = Mathf.PI * 2f * ((float)i / (float)n);
             renderVerts.Add(new Vector3 {
@@ -270,16 +274,10 @@ public class Main : MonoBehaviour {
         }
     }
 
-    public void DrawConvexPolygon(List<V2> ps, Color color) {
+    void DrawConvexPolygon(List<V2> ps, Color color) {
         int n = ps.Count;
         for(int i = 0; i < n; i++) {
-            var p = ps[i];
-            renderVerts.Add(new Vector3 {
-                x = p.x,
-                y = p.y,
-                z = 0f,
-            });
-
+            renderVerts.Add(Convert(ps[i]));
             renderColors.Add(color);
         }
 
@@ -290,4 +288,51 @@ public class Main : MonoBehaviour {
             renderTris.Add(lastVert - n + i - 1);
         }
     }
+
+    void DrawArrow(V2 from, V2 to, float w, Color color) {
+        V2 dp = to - from;
+        float dpLen = dp.Len();
+        V2 dir = dp / dpLen;
+        V2 perp = new V2 { x = dir.y, y = -dir.x };
+        V2 cornerHorDp = perp * w;
+
+        const float HEAD_LEN_RATIO = 0.3f;
+
+        V2 corner00 = from + cornerHorDp;
+        V2 corner01 = from - cornerHorDp;
+        V2 corner1Center = from + (dp * (1f - HEAD_LEN_RATIO));
+        V2 corner10 = corner1Center + cornerHorDp;
+        V2 corner11 = corner1Center - cornerHorDp;
+
+        const float HEAD_WITH_RATIO = 2f;
+
+        V2 headTop = to;
+        V2 headBottom0 = corner1Center + cornerHorDp * HEAD_WITH_RATIO;
+        V2 headBottom1 = corner1Center - cornerHorDp * HEAD_WITH_RATIO;
+
+        renderVerts.Add(Convert(corner00));
+        renderVerts.Add(Convert(corner01));
+        renderVerts.Add(Convert(corner10));
+        renderVerts.Add(Convert(corner11));
+        renderVerts.Add(Convert(headTop));
+        renderVerts.Add(Convert(headBottom0));
+        renderVerts.Add(Convert(headBottom1));
+
+        int atVert = renderVerts.Count - 1;
+        renderTris.Add(atVert--);
+        renderTris.Add(atVert--);
+        renderTris.Add(atVert--);
+
+        renderTris.Add(atVert);
+        renderTris.Add(atVert - 1);
+        renderTris.Add(atVert - 2);
+
+        renderTris.Add(atVert - 1);
+        renderTris.Add(atVert - 2);
+        renderTris.Add(atVert - 3);
+
+        for(int i = 0; i < 7; i++) renderColors.Add(color);
+    }
+
+    static Vector3 Convert(V2 v) { return new Vector3(v.x, v.y, 0f); }
 }
