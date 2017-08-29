@@ -60,6 +60,18 @@ public struct V2 {
 
     public float Len2() { return x * x + y * y; }
     public float Len() { return Math.Sqrt(Len2()); }
+
+    public V2 getRotated(float angle) {
+        float sin = Math.Sin(angle);
+        float cos = Math.Cos(angle);
+        return getRotated(sin, cos);
+    }
+    public V2 getRotated(float sin, float cos) {
+        return new V2 {
+            x = cos * x - sin * y,
+            y = sin * x + cos * y,
+        };
+    }
 }
 
 public class Body {
@@ -135,23 +147,32 @@ public class Main : MonoBehaviour {
 
         RenderPre();
 
-        DrawConvexPolygon(
-            new List<V2> {
-                new V2 { x = -0.9f, y = 0.1f },
-                new V2 { x = -0.9f, y = -0.1f },
-                new V2 { x = 0.9f, y = 0f },
-            }, Color.red);
+        //DrawConvexPolygon(
+        //    new List<V2> {
+        //        new V2 { x = -0.9f, y = 0.1f },
+        //        new V2 { x = -0.9f, y = -0.1f },
+        //        new V2 { x = 0.9f, y = 0f },
+        //    }, Color.red);
+        //
+        //DrawCircle(outerCircle.center.x, outerCircle.center.y, outerCircle.r, new Color(0, 0, 1, 0.5f));
+        //foreach(var i in bodies) {
+        //    DrawCircle(i.center.x, i.center.y, i.r, Color.green);
+        //}
+        //
+        //DrawArrow(
+        //    new V2 { x = -0.3f, y = -0.9f },
+        //    new V2 { x = -0.7f, y = 0.3f },
+        //    0.1f,
+        //    Color.white );
 
-        DrawCircle(outerCircle.center.x, outerCircle.center.y, outerCircle.r, new Color(0, 0, 1, 0.5f));
-        foreach(var i in bodies) {
-            DrawCircle(i.center.x, i.center.y, i.r, Color.green);
+        int N = 50;
+        for(int i = 0; i < N; i++) {
+            float ratio = (float)i / (float)N;
+            float angle = 2 * Math.PI * ratio;
+            V2 p = new V2 { x = 0.5f, y = 0.5f };
+            V2 r = p.getRotated(angle);
+            DrawCircle(r.x, r.y, 0.05f, new Color(0, ratio, 1 - ratio));
         }
-
-        DrawArrow(
-            new V2 { x = -0.3f, y = -0.9f },
-            new V2 { x = -0.7f, y = 0.3f },
-            0.1f,
-            Color.white );
 
         RenderPost();
     }
