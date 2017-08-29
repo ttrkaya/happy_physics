@@ -76,25 +76,60 @@ public struct V2 {
 
 public class Body {
     public V2 center;
-    public V2 vel;
-    public float r;
+    public float angle;
     public float invMass; // = 1 / mass
+    //TODO: inertia
+    public V2 velLin;
+    public float velRot;
+
+    public void Integrate(float dt) {
+        center += velLin * dt;
+        angle += velRot * dt;
+    }
 
     public void ApplyImpulse(V2 impulse) {
-        vel += impulse * invMass;
+        velLin += impulse * invMass;
     }
+}
+public class BodyCircle : Body {
+    public float r;
+}
+public class BodyPolygon : Body {
+    public List<V2> corners;
 }
 
 public class Main : MonoBehaviour {
 
-    List<Body> bodies = new List<Body> {
+    List<BodyCircle> circles = new List<BodyCircle> {
         
     };
+    List<BodyPolygon> polys = new List<BodyPolygon> {
+        new BodyPolygon {
+            center = new V2 {
+                x = 1,
+                y = 0,
+            },
+            angle = Math.PI * 0.25f,
+            invMass = 1f,
+            velLin = new V2 {
+                x = -0.7f,
+                y = 0.3f,
+            },
+            velRot = Math.PI * 2f,
+
+            corners = new List<V2> {
+                new V2 { x = 1, y = 1 },
+                new V2 { x = 1, y = -1 },
+                new V2 { x = -1, y = -1 },
+                new V2 { x = -1, y = 1 },
+            }
+        }
+    };
     
-    Body outerCircle = new Body {
+    BodyCircle outerCircle = new BodyCircle {
         r = 0.5f,
         center = new V2(),
-        vel = new V2 { x = 1f, y = 1f },
+        velLin = new V2 { x = 1f, y = 1f },
         invMass = 5f,
     };
 
@@ -106,9 +141,9 @@ public class Main : MonoBehaviour {
         for(int i = 0; i < N; i++) {
             float angle = 2f * Math.PI * i / N;
             float r = Random.Range(0.2f, 0.4f);
-            bodies.Add(new Body {
+            circles.Add(new BodyCircle {
                 center = new V2 { x = Math.Cos(angle), y = Math.Sin(angle) } * r,
-                vel = new V2 { x = -Math.Cos(angle), y = -Math.Sin(angle) },
+                velLin = new V2 { x = -Math.Cos(angle), y = -Math.Sin(angle) },
                 r = r * 0.1f,
                 invMass = 1f / (r * r),
             });
@@ -123,22 +158,25 @@ public class Main : MonoBehaviour {
 
         dt *= 0.3f;
 
-        foreach(var i in bodies) {
-            i.center += i.vel * dt;
+        foreach(var i in circles) {
+            i.Integrate(dt);
         }
-        outerCircle.center += outerCircle.vel * dt;
+        foreach(var i in polys) {
+            i.Integrate(dt);
+        }
+        outerCircle.Integrate(dt);
         
-        int n = bodies.Count;
+        int n = circles.Count;
         for(int i = n - 1; i >= 0; i--) {
-            var a = bodies[i];
+            var a = circles[i];
             for(int j = i - 1; j >= 0; j--) {
-                var b = bodies[j];
+                var b = circles[j];
                 HandlePairOutside(a, b);
             }
         }
         
         for(int i = n - 1; i >= 0; i--) {
-            var o = bodies[i];
+            var o = circles[i];
             var outer = outerCircle;
             HandlePairInside(o, outer);
         }
@@ -147,37 +185,39 @@ public class Main : MonoBehaviour {
 
         RenderPre();
 
-        //DrawConvexPolygon(
-        //    new List<V2> {
-        //        new V2 { x = -0.9f, y = 0.1f },
-        //        new V2 { x = -0.9f, y = -0.1f },
-        //        new V2 { x = 0.9f, y = 0f },
-        //    }, Color.red);
-        //
-        //DrawCircle(outerCircle.center.x, outerCircle.center.y, outerCircle.r, new Color(0, 0, 1, 0.5f));
-        //foreach(var i in bodies) {
-        //    DrawCircle(i.center.x, i.center.y, i.r, Color.green);
-        //}
-        //
+        DrawCircle(outerCircle.center.x, outerCircle.center.y, outerCircle.r, new Color(0, 0, 1, 0.5f));
+        foreach(var i in circles) {
+            DrawCircle(i.center.x, i.center.y, i.r, Color.green);
+        }
+        foreach(var i in polys) {
+            var ps = new List<V2>();
+            foreach(var c in i.corners) {
+                var p = c.getRotated(i.angle);
+                p += i.center;
+                ps.Add(p);
+            }
+            DrawConvexPolygon(ps, new Color(0, 1, 0, 0.5f));
+        }
+        
         //DrawArrow(
         //    new V2 { x = -0.3f, y = -0.9f },
         //    new V2 { x = -0.7f, y = 0.3f },
         //    0.1f,
         //    Color.white );
 
-        int N = 50;
-        for(int i = 0; i < N; i++) {
-            float ratio = (float)i / (float)N;
-            float angle = 2 * Math.PI * ratio;
-            V2 p = new V2 { x = 0.5f, y = 0.5f };
-            V2 r = p.getRotated(angle);
-            DrawCircle(r.x, r.y, 0.05f, new Color(0, ratio, 1 - ratio));
-        }
+        //int N = 50;
+        //for(int i = 0; i < N; i++) {
+        //    float ratio = (float)i / (float)N;
+        //    float angle = 2 * Math.PI * ratio;
+        //    V2 p = new V2 { x = 0.5f, y = 0.5f };
+        //    V2 r = p.getRotated(angle);
+        //    DrawCircle(r.x, r.y, 0.05f, new Color(0, ratio, 1 - ratio));
+        //}
 
         RenderPost();
     }
 
-    static void HandlePairInside(Body inner, Body outer) {
+    static void HandlePairInside(BodyCircle inner, BodyCircle outer) {
         float dr = outer.r - inner.r;
         V2 dp = inner.center - outer.center;
         float d2 = dp.Len2();
@@ -194,7 +234,7 @@ public class Main : MonoBehaviour {
             inner.center += normal * (totOverlap * invMassRatioB);
             outer.center -= normal * (totOverlap * invMassRatioA);
 
-            V2 dv = inner.vel - outer.vel;
+            V2 dv = inner.velLin - outer.velLin;
             bool movingTowardsEachOther = dp * dv > 0;
             if(movingTowardsEachOther) { // bounce
                 const float BOUNCINESS = 0.99f; // [0, 1]
@@ -211,13 +251,13 @@ public class Main : MonoBehaviour {
         }
     }
 
-    static void HandlePairOutside(Body a, Body b) {
+    static void HandlePairOutside(BodyCircle a, BodyCircle b) {
         float tr = a.r + b.r;
         V2 dp = b.center - a.center;
         float d2 = dp.Len2();
         bool collided = d2 <= tr * tr;
         if(collided) {
-            V2 dv = b.vel - a.vel;
+            V2 dv = b.velLin - a.velLin;
 
             float totInvMass = a.invMass + b.invMass;
             float invMassRatioA = a.invMass / totInvMass;
