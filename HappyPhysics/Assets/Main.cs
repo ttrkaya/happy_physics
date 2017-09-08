@@ -61,16 +61,30 @@ public struct V2 {
     public float Len2() { return x * x + y * y; }
     public float Len() { return Math.Sqrt(Len2()); }
 
-    public V2 getRotated(float angle) {
+    public void Normalize() {
+
+    }
+    public V2 GetNormalized() {
+
+    }
+
+    public V2 GetRotated(float angle) {
         float sin = Math.Sin(angle);
         float cos = Math.Cos(angle);
-        return getRotated(sin, cos);
+        return GetRotated(sin, cos);
     }
-    public V2 getRotated(float sin, float cos) {
+    public V2 GetRotated(float sin, float cos) {
         return new V2 {
             x = cos * x - sin * y,
             y = sin * x + cos * y,
         };
+    }
+
+    public void Rotate(float angle) {
+
+    }
+    public void Rotate(float sin, float cos) {
+
     }
 }
 
@@ -96,6 +110,10 @@ public class BodyCircle : Body {
 }
 public class BodyPolygon : Body {
     public List<V2> corners;
+
+    public List<V2> GetGlobalCorners() {
+        
+    }
 }
 
 public class Main : MonoBehaviour {
@@ -148,6 +166,8 @@ public class Main : MonoBehaviour {
                 invMass = 1f / (r * r),
             });
         }
+
+        ColDetect(polys[0], null);
 	}
     
 	void Update () {
@@ -171,14 +191,14 @@ public class Main : MonoBehaviour {
             var a = circles[i];
             for(int j = i - 1; j >= 0; j--) {
                 var b = circles[j];
-                HandlePairOutside(a, b);
+                HandleCirclesOutside(a, b);
             }
         }
         
         for(int i = n - 1; i >= 0; i--) {
             var o = circles[i];
             var outer = outerCircle;
-            HandlePairInside(o, outer);
+            HandleCirclesInside(o, outer);
         }
 
         // ------ Render ----------
@@ -217,7 +237,7 @@ public class Main : MonoBehaviour {
         RenderPost();
     }
 
-    static void HandlePairInside(BodyCircle inner, BodyCircle outer) {
+    static void HandleCirclesInside(BodyCircle inner, BodyCircle outer) {
         float dr = outer.r - inner.r;
         V2 dp = inner.center - outer.center;
         float d2 = dp.Len2();
@@ -251,7 +271,7 @@ public class Main : MonoBehaviour {
         }
     }
 
-    static void HandlePairOutside(BodyCircle a, BodyCircle b) {
+    static void HandleCirclesOutside(BodyCircle a, BodyCircle b) {
         float tr = a.r + b.r;
         V2 dp = b.center - a.center;
         float d2 = dp.Len2();
@@ -284,6 +304,41 @@ public class Main : MonoBehaviour {
                 b.ApplyImpulse(-impLen * normal);
             }
         }
+    }
+
+    static Col ColDetect(BodyPolygon a, BodyPolygon b) {
+        // calc world poses of all corners
+        int na = a.corners.Count;
+        var aps = new List<V2>();
+        for(int i = 0; i < na; i++) {
+            V2 p = a.corners[i];
+            p.getRotated(a.angle);
+            p += a.center;
+            aps.Add(p);
+        }
+
+        int nb = b.cor
+
+        int n = a.corners.Count;
+        for(int i = 0, lastIndex = n - 1; i < n; lastIndex = i, i++) {
+            V2 corner0 = a.corners[lastIndex];
+            V2 corner1 = a.corners[i];
+
+            V2 normal = new V2 {
+                x = corner1.y - corner0.y,
+                y = corner0.x - corner1.x,
+            };
+            normal /= normal.Len(); // TO-OPT: most of the time, unnecessary
+
+            float aMin = 
+        }
+        return null;
+    }
+
+    class Col {
+        public V2 pos;
+        public V2 normal;
+        public float depth;
     }
 
     // -------------- Render --------------------
