@@ -62,10 +62,26 @@ public struct V2 {
     public float Len() { return Math.Sqrt(Len2()); }
 
     public void Normalize() {
-
+        float len = Len();
+        if(len <= 0f) throw new System.Exception();
+        this /= len;
     }
     public V2 GetNormalized() {
+        float len = Len();
+        if(len <= 0f) throw new System.Exception();
+        return this / len;
+    }
 
+    public void Perp() {
+        float temp = x;
+        x = y;
+        y = -temp;
+    }
+    public V2 GetPerped() {
+        return new V2 {
+            x = y,
+            y = -x,
+        };
     }
 
     public V2 GetRotated(float angle) {
@@ -81,10 +97,15 @@ public struct V2 {
     }
 
     public void Rotate(float angle) {
-
+        float sin = Math.Sin(angle);
+        float cos = Math.Cos(angle);
+        Rotate(sin, cos);
     }
     public void Rotate(float sin, float cos) {
-
+        float tx = x;
+        float ty = y;
+        x = cos * tx - sin * ty;
+        y = sin * tx + cos * ty;
     }
 }
 
@@ -112,7 +133,14 @@ public class BodyPolygon : Body {
     public List<V2> corners;
 
     public List<V2> GetGlobalCorners() {
-        
+        var res = new List<V2>();
+        float sin = Math.Sin(angle);
+        float cos = Math.Cos(angle);
+        for(int i = 0; i < corners.Count; i++) {
+            var p = corners[i].GetRotated(sin, cos) + center;
+            res.Add(p);
+        }
+        return res;
     }
 }
 
@@ -212,7 +240,7 @@ public class Main : MonoBehaviour {
         foreach(var i in polys) {
             var ps = new List<V2>();
             foreach(var c in i.corners) {
-                var p = c.getRotated(i.angle);
+                var p = c.GetRotated(i.angle);
                 p += i.center;
                 ps.Add(p);
             }
@@ -306,7 +334,8 @@ public class Main : MonoBehaviour {
         }
     }
 
-    static Col ColDetect(BodyPolygon a, BodyPolygon b) {
+    // SAT
+    static Col ColDetect(BodyPolygon a, BodyPolygon b) { 
         // calc world poses of all corners
         int na = a.corners.Count;
         var aps = new List<V2>();
