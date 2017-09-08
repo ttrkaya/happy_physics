@@ -158,8 +158,8 @@ public class Main : MonoBehaviour {
             angle = Math.PI * 0.25f,
             invMass = 1f,
             velLin = new V2 {
-                x = -0.7f,
-                y = 0.3f,
+                x = -0.2f,
+                y = 0.1f,
             },
             velRot = Math.PI * 2f,
 
@@ -167,8 +167,23 @@ public class Main : MonoBehaviour {
                 new V2 { x = 1, y = 1 },
                 new V2 { x = 1, y = -1 },
                 new V2 { x = -1, y = -1 },
-                new V2 { x = -1, y = 1 },
+                new V2 { x = -1, y = 2 },
             }
+        },
+        new BodyPolygon {
+            center = new V2 {
+                x = -2,
+                y = 0,
+            },
+
+            velRot = Math.PI * 0.15f,
+
+            corners = new List<V2> {
+                new V2 { x = 1, y = 1 },
+                new V2 { x = 1, y = -1 },
+                new V2 { x = -1, y = -1 },
+                new V2 { x = -1, y = 1 },
+            },
         }
     };
     
@@ -194,8 +209,6 @@ public class Main : MonoBehaviour {
                 invMass = 1f / (r * r),
             });
         }
-
-        ColDetect(polys[0], null);
 	}
     
 	void Update () {
@@ -246,12 +259,13 @@ public class Main : MonoBehaviour {
             }
             DrawConvexPolygon(ps, new Color(0, 1, 0, 0.5f));
         }
-        
-        //DrawArrow(
-        //    new V2 { x = -0.3f, y = -0.9f },
-        //    new V2 { x = -0.7f, y = 0.3f },
-        //    0.1f,
-        //    Color.white );
+
+        float alpha = ColDetect(polys[0], polys[1]) != null ? 0.7f : 0.1f;
+        DrawArrow(
+            new V2 { x = -0.3f, y = -0.9f },
+            new V2 { x = -0.7f, y = 0.3f },
+            0.1f,
+            new Color(1, 1, 1, alpha));
 
         //int N = 50;
         //for(int i = 0; i < N; i++) {
@@ -335,39 +349,50 @@ public class Main : MonoBehaviour {
     }
 
     // SAT
-    static Col ColDetect(BodyPolygon a, BodyPolygon b) { 
-        // calc world poses of all corners
-        int na = a.corners.Count;
-        var aps = new List<V2>();
-        for(int i = 0; i < na; i++) {
-            V2 p = a.corners[i];
-            p.getRotated(a.angle);
-            p += a.center;
-            aps.Add(p);
-        }
-
-        int nb = b.cor
-
-        int n = a.corners.Count;
-        for(int i = 0, lastIndex = n - 1; i < n; lastIndex = i, i++) {
-            V2 corner0 = a.corners[lastIndex];
-            V2 corner1 = a.corners[i];
-
-            V2 normal = new V2 {
-                x = corner1.y - corner0.y,
-                y = corner0.x - corner1.x,
-            };
-            normal /= normal.Len(); // TO-OPT: most of the time, unnecessary
-
-            float aMin = 
-        }
-        return null;
-    }
-
     class Col {
         public V2 pos;
         public V2 normal;
         public float depth;
+    }
+    static Col ColDetect(BodyPolygon a, BodyPolygon b) {
+        var aGlobalCorners = a.GetGlobalCorners();
+        var bGlobalCorners = b.GetGlobalCorners();
+
+        var aCol = ColDetectOneSide(aGlobalCorners, bGlobalCorners);
+        if(aCol == null) return null;
+        var bCol = ColDetectOneSide(bGlobalCorners, aGlobalCorners);
+        if(bCol == null) return null;
+
+        return aCol.depth < bCol.depth ? aCol : bCol;
+    }
+
+    static Col ColDetectOneSide(List<V2> edges, List<V2> verts) {
+        for(int i = 0, lastIndex = edges.Count - 1; i < edges.Count; lastIndex = i, i++) {
+            V2 edgeCornerA = edges[lastIndex];
+            V2 edgeCornerB = edges[i];
+
+            V2 normal = (edgeCornerB - edgeCornerA).GetNormalized().GetPerped();
+
+            float edgesMin = edges[0] * normal;
+            float edgesMax = edgesMin;
+            for(int j = 1; j < edges.Count; j++) {
+                float p = edges[j] * normal;
+                if(p < edgesMin) edgesMin = p;
+                if(edgesMax < p) edgesMax = p;
+            }
+
+            float vertsMin = verts[0] * normal;
+            float vertsMax = vertsMin;
+            for(int j = 1; j < verts.Count; j++) {
+                float p = verts[j] * normal;
+                if(p < vertsMin) vertsMin = p;
+                if(vertsMax < p) vertsMax = p;
+            }
+
+            if(edgesMax < vertsMin) return null;
+            if(vertsMax < edgesMin) return null;
+        }
+        return new Col();
     }
 
     // -------------- Render --------------------
